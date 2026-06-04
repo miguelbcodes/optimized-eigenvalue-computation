@@ -63,3 +63,9 @@ void Matrix::print(std::ostream& out) const {
         out << '\n';
     }
 }
+
+void Matrix::fill_random(Matrix& m) {
+    for (std::size_t i = 0; i < m.size(); ++i)
+        for (std::size_t j = 0; j < m.size(); ++j)
+            m(i, j) = static_cast<double>(rand() % 512 - 256);
+}

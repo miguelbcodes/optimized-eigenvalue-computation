@@ -24,6 +24,7 @@ public:
     static Matrix identity(std::size_t n);
 
     void print(std::ostream& out = std::cout) const;
+    static void fill_random(Matrix& m);
 
 private:
     std::size_t n_;
