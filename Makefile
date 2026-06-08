@@ -2,7 +2,7 @@ CXX = g++
 CXXFLAGS = -std=c++17 -Wall -O2
 
 # Object files
-OBJS = main.o matrix.o vector.o householder.o
+OBJS = main.o matrix.o vector.o householder.o hessenberg.o
 
 # Executable
 TARGET = compute-eigenvalues
