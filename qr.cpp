@@ -1,19 +1,22 @@
 #include "include/qr.h"
 #include <cmath>
-#include <algorithm>
+#include <vector>
 
-static void givens_rotation(double a, double b, double& c, double& s) {
-    if (b == 0.0) {
+// Compute Givens rotation coefficients (c, s) that zero out `lower`:
+// [ c  -s ] [ upper ] = [ r ]
+// [ s   c ] [ lower ]   [ 0 ]
+static void givens_rotation(double upper, double lower, double& c, double& s) {
+    if (lower == 0.0) {
         c = 1.0;
         s = 0.0;
-    } else if (std::abs(b) > std::abs(a)) {
-        double t = -a / b;
-        s = 1.0 / std::sqrt(1.0 + t * t);
-        c = s * t;
+    } else if (std::abs(lower) > std::abs(upper)) {
+        double tau = -upper / lower;
+        s = 1.0 / std::sqrt(1.0 + tau * tau);
+        c = s * tau;
     } else {
-        double t = -b / a;
-        c = 1.0 / std::sqrt(1.0 + t * t);
-        s = c * t;
+        double tau = -lower / upper;
+        c = 1.0 / std::sqrt(1.0 + tau * tau);
+        s = c * tau;
     }
 }
 
@@ -22,126 +25,146 @@ QRResult qr_factorize_hessenberg(const Matrix& H) {
     Matrix R = H;
     Matrix Q = Matrix::identity(n);
 
-    for (std::size_t i = 0; i < n - 1; ++i) {
+    for (std::size_t row = 0; row < n - 1; ++row) {
         double c, s;
-        givens_rotation(R(i, i), R(i + 1, i), c, s);
+        givens_rotation(R(row, row), R(row + 1, row), c, s);
 
-        for (std::size_t j = i; j < n; ++j) {
-            double r0 = R(i, j);
-            double r1 = R(i + 1, j);
-            R(i, j)     =  c * r0 - s * r1;
-            R(i + 1, j) =  s * r0 + c * r1;
+        // Apply G^T from the left to rows (row, row+1)
+        for (std::size_t col = row; col < n; ++col) {
+            double val_curr = R(row, col);
+            double val_next = R(row + 1, col);
+            R(row, col)     =  c * val_curr - s * val_next;
+            R(row + 1, col) =  s * val_curr + c * val_next;
         }
 
-        for (std::size_t j = 0; j < n; ++j) {
-            double q0 = Q(j, i);
-            double q1 = Q(j, i + 1);
-            Q(j, i)     =  c * q0 - s * q1;
-            Q(j, i + 1) =  s * q0 + c * q1;
+        // Accumulate Q = Q * G (columns row, row+1)
+        for (std::size_t i = 0; i < n; ++i) {
+            double val_curr = Q(i, row);
+            double val_next = Q(i, row + 1);
+            Q(i, row)     =  c * val_curr - s * val_next;
+            Q(i, row + 1) =  s * val_curr + c * val_next;
         }
     }
 
     return {Q, R};
 }
 
-static bool is_negligible(const Matrix& H, int i, double epsilon) {
-    double scale = std::abs(H(i - 1, i - 1)) + std::abs(H(i, i));
+// Check if subdiagonal entry H(row, row-1) is negligible relative to its neighbors.
+static bool is_negligible(const Matrix& H, int row, double tolerance) {
+    double scale = std::abs(H(row - 1, row - 1)) + std::abs(H(row, row));
     if (scale == 0.0) scale = 1.0;
-    return std::abs(H(i, i - 1)) < epsilon * scale;
+    return std::abs(H(row, row - 1)) < tolerance * scale;
 }
 
-// Apply one implicit shifted QR step on the active submatrix H[l..p, l..p]
-static void qr_step(Matrix& H, int l, int p, double shift) {
-    for (int i = l; i <= p; ++i)
+// Check if a 2x2 block has complex eigenvalues (negative discriminant).
+static bool has_complex_eigenvalues(double h11, double h12, double h21, double h22) {
+    double discriminant = (h11 - h22) * (h11 - h22) + 4.0 * h12 * h21;
+    return discriminant < 0.0;
+}
+
+// Compute Wilkinson shift: eigenvalue of the trailing 2x2 block closest to h22.
+static double wilkinson_shift(double h11, double h12, double h21, double h22) {
+    double trace = h11 + h22;
+    double det = h11 * h22 - h12 * h21;
+    double discriminant = trace * trace - 4.0 * det;
+
+    if (discriminant < 0.0)
+        return h22;
+
+    double sqrt_disc = std::sqrt(discriminant);
+    double eigenvalue_1 = (trace + sqrt_disc) / 2.0;
+    double eigenvalue_2 = (trace - sqrt_disc) / 2.0;
+
+    return (std::abs(eigenvalue_1 - h22) < std::abs(eigenvalue_2 - h22))
+        ? eigenvalue_1
+        : eigenvalue_2;
+}
+
+// Apply one shifted QR step via Givens rotations on H[block_start..block_end].
+static void qr_step(Matrix& H, int block_start, int block_end, double shift) {
+    for (int i = block_start; i <= block_end; ++i)
         H(i, i) -= shift;
 
-    std::vector<double> cs(p - l), ss(p - l);
+    int block_size = block_end - block_start;
+    std::vector<double> cosines(block_size), sines(block_size);
 
-    for (int i = l; i < p; ++i) {
+    // QR factorization via Givens: G_{n-1}^T ... G_1^T * (H - shift*I) = R
+    for (int row = block_start; row < block_end; ++row) {
         double c, s;
-        givens_rotation(H(i, i), H(i + 1, i), c, s);
-        cs[i - l] = c;
-        ss[i - l] = s;
+        givens_rotation(H(row, row), H(row + 1, row), c, s);
+        cosines[row - block_start] = c;
+        sines[row - block_start] = s;
 
-        for (int j = i; j <= p; ++j) {
-            double r0 = H(i, j);
-            double r1 = H(i + 1, j);
-            H(i, j)     =  c * r0 - s * r1;
-            H(i + 1, j) =  s * r0 + c * r1;
+        for (int col = row; col <= block_end; ++col) {
+            double val_curr = H(row, col);
+            double val_next = H(row + 1, col);
+            H(row, col)     =  c * val_curr - s * val_next;
+            H(row + 1, col) =  s * val_curr + c * val_next;
         }
     }
 
-    for (int i = l; i < p; ++i) {
-        double c = cs[i - l], s = ss[i - l];
-        for (int j = l; j <= i + 1; ++j) {
-            double r0 = H(j, i);
-            double r1 = H(j, i + 1);
-            H(j, i)     =  c * r0 - s * r1;
-            H(j, i + 1) =  s * r0 + c * r1;
+    // Form R * Q by applying Givens rotations from the right
+    for (int i = block_start; i < block_end; ++i) {
+        double c = cosines[i - block_start];
+        double s = sines[i - block_start];
+        for (int row = block_start; row <= i + 1; ++row) {
+            double val_curr = H(row, i);
+            double val_next = H(row, i + 1);
+            H(row, i)     =  c * val_curr - s * val_next;
+            H(row, i + 1) =  s * val_curr + c * val_next;
         }
     }
 
-    for (int i = l; i <= p; ++i)
+    for (int i = block_start; i <= block_end; ++i)
         H(i, i) += shift;
 }
 
-Matrix qr_iterate(Matrix H, double epsilon, int max_iter) {
+Matrix qr_iterate(Matrix H, double tolerance, int max_iterations) {
     int n = static_cast<int>(H.size());
     if (n <= 1)
         return H;
 
-    int p = n - 1;
+    int active_end = n - 1;
 
-    for (int iter = 0; iter < max_iter && p > 0; ++iter) {
-        // Deflate converged entries from the bottom
-        while (p > 0 && is_negligible(H, p, epsilon)) {
-            H(p, p - 1) = 0.0;
-            --p;
+    for (int iter = 0; iter < max_iterations && active_end > 0; ++iter) {
+        // Deflate converged real eigenvalues from the bottom
+        while (active_end > 0 && is_negligible(H, active_end, tolerance)) {
+            H(active_end, active_end - 1) = 0.0;
+            --active_end;
         }
-        if (p == 0) break;
+        if (active_end == 0) break;
 
-        // Check for converged 2x2 complex block at bottom
-        if (p >= 2 && is_negligible(H, p - 1, epsilon)) {
-            double a = H(p - 1, p - 1), b = H(p - 1, p);
-            double c = H(p, p - 1),     d = H(p, p);
-            double disc = (a - d) * (a - d) + 4.0 * b * c;
-            if (disc < 0.0) {
-                H(p - 1, p - 2) = 0.0;
-                p -= 2;
+        // Deflate converged 2x2 complex block at the bottom
+        if (active_end >= 2 && is_negligible(H, active_end - 1, tolerance)) {
+            double h11 = H(active_end - 1, active_end - 1);
+            double h12 = H(active_end - 1, active_end);
+            double h21 = H(active_end, active_end - 1);
+            double h22 = H(active_end, active_end);
+            if (has_complex_eigenvalues(h11, h12, h21, h22)) {
+                H(active_end - 1, active_end - 2) = 0.0;
+                active_end -= 2;
                 continue;
             }
         }
-        if (p == 1) {
-            double a = H(0, 0), b = H(0, 1);
-            double c = H(1, 0), d = H(1, 1);
-            double disc = (a - d) * (a - d) + 4.0 * b * c;
-            if (disc < 0.0) break;
+
+        // Irreducible 2x2 complex block — nothing left to do
+        if (active_end == 1) {
+            double h11 = H(0, 0), h12 = H(0, 1);
+            double h21 = H(1, 0), h22 = H(1, 1);
+            if (has_complex_eigenvalues(h11, h12, h21, h22)) break;
         }
 
-        // Find the start of the active unreduced block
-        int l = p - 1;
-        while (l > 0 && !is_negligible(H, l, epsilon)) --l;
-        if (l > 0) H(l, l - 1) = 0.0;
+        // Find the top of the active unreduced block
+        int active_start = active_end - 1;
+        while (active_start > 0 && !is_negligible(H, active_start, tolerance))
+            --active_start;
+        if (active_start > 0) H(active_start, active_start - 1) = 0.0;
 
-        // Wilkinson shift from trailing 2x2 of active block
-        double a = H(p - 1, p - 1);
-        double b = H(p - 1, p);
-        double c = H(p, p - 1);
-        double d = H(p, p);
-        double trace = a + d;
-        double det = a * d - b * c;
-        double disc = trace * trace - 4.0 * det;
-        double mu;
-        if (disc < 0.0) {
-            mu = d;
-        } else {
-            double sqrt_disc = std::sqrt(disc);
-            double lam1 = (trace + sqrt_disc) / 2.0;
-            double lam2 = (trace - sqrt_disc) / 2.0;
-            mu = (std::abs(lam1 - d) < std::abs(lam2 - d)) ? lam1 : lam2;
-        }
+        double shift = wilkinson_shift(
+            H(active_end - 1, active_end - 1), H(active_end - 1, active_end),
+            H(active_end, active_end - 1),     H(active_end, active_end));
 
-        qr_step(H, l, p, mu);
+        qr_step(H, active_start, active_end, shift);
     }
 
     return H;

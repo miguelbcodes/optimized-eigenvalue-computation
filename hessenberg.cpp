@@ -6,16 +6,18 @@ Matrix reduce_to_hessenberg(Matrix A) {
     if (n <= 2)
         return A;
 
-    for (std::size_t k = 0; k < n - 2; ++k) {
-        std::size_t m = n - k - 1;
-        Vector x(m);
-        for (std::size_t i = 0; i < m; ++i)
-            x[i] = A(k + 1 + i, k);
+    for (std::size_t col = 0; col < n - 2; ++col) {
+        // Extract the subcolumn A(col+1 : n-1, col) to be zeroed out
+        std::size_t subvec_len = n - col - 1;
+        Vector subcolumn(subvec_len);
+        for (std::size_t i = 0; i < subvec_len; ++i)
+            subcolumn[i] = A(col + 1 + i, col);
 
-        Vector v = householder_vector(x);
+        Vector reflector = householder_vector(subcolumn);
 
-        apply_householder_left(A, v, k + 1, k, n);
-        apply_householder_right(A, v, 0, n, k + 1);
+        // Similarity transformation: A <- Q_k^T * A * Q_k
+        apply_householder_left(A, reflector, col + 1, col, n);
+        apply_householder_right(A, reflector, 0, n, col + 1);
     }
 
     return A;
