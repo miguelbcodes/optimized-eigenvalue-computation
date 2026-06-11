@@ -1,1 +1,6 @@
 *.o
+compute-eigenvalues
+benchmark
+.venv/
+benchmark_results.csv
+*.png
