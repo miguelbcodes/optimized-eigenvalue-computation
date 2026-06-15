@@ -1,28 +1,39 @@
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -O2
 
-# Object files
-OBJS = main.o matrix.o vector.o householder.o hessenberg.o qr.o
-LIB_OBJS = matrix.o vector.o householder.o hessenberg.o qr.o
+SRCDIR = src
+BENCHDIR = bench
+BUILDDIR = build
+INCLUDEDIR = include
 
-# Executables
-TARGET = compute-eigenvalues
-BENCHMARK = benchmark
+SRCS = matrix.cpp vector.cpp householder.cpp hessenberg.cpp qr.cpp
+LIB_OBJS = $(patsubst %.cpp,$(BUILDDIR)/%.o,$(SRCS))
+MAIN_OBJ = $(BUILDDIR)/main.o
+BENCH_OBJ = $(BUILDDIR)/benchmark.o
 
-# Build
+TARGET = $(BUILDDIR)/compute-eigenvalues
+BENCHMARK = $(BUILDDIR)/benchmark
+
 all: $(TARGET)
 
-$(TARGET): $(OBJS)
-	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS)
+$(TARGET): $(MAIN_OBJ) $(LIB_OBJS) | $(BUILDDIR)
+	$(CXX) $(CXXFLAGS) -o $@ $^
 
-benchmark: benchmark.o $(LIB_OBJS)
-	$(CXX) $(CXXFLAGS) -o $(BENCHMARK) benchmark.o $(LIB_OBJS)
+$(BENCHMARK): $(BENCH_OBJ) $(LIB_OBJS) | $(BUILDDIR)
+	$(CXX) $(CXXFLAGS) -o $@ $^
 
-# Compile .cpp to .o
-%.o: %.cpp
+$(BUILDDIR)/%.o: $(SRCDIR)/%.cpp | $(BUILDDIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
+$(BUILDDIR)/benchmark.o: $(BENCHDIR)/benchmark.cpp | $(BUILDDIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(BUILDDIR):
+	mkdir -p $(BUILDDIR)
+
+benchmark: $(BENCHMARK)
+
 clean:
-	rm -f $(OBJS) benchmark.o $(TARGET) $(BENCHMARK)
+	rm -rf $(BUILDDIR)
 
 .PHONY: clean all benchmark
