@@ -25,6 +25,8 @@ public:
 
     void print(std::ostream& out = std::cout) const;
     static void fill_random(Matrix& m);
+    // Fill with a random symmetric matrix (m == m.transpose()).
+    static void fill_random_symmetric(Matrix& m);
 
 private:
     std::size_t n_;

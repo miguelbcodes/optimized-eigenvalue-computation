@@ -69,3 +69,14 @@ void Matrix::fill_random(Matrix& m) {
         for (std::size_t j = 0; j < m.size(); ++j)
             m(i, j) = static_cast<double>(rand() % 512 - 256);
 }
+
+void Matrix::fill_random_symmetric(Matrix& m) {
+    // Fill the upper triangle (including the diagonal) and mirror it so the
+    // result is exactly symmetric: m(i, j) == m(j, i).
+    for (std::size_t i = 0; i < m.size(); ++i)
+        for (std::size_t j = i; j < m.size(); ++j) {
+            double value = static_cast<double>(rand() % 512 - 256);
+            m(i, j) = value;
+            m(j, i) = value;
+        }
+}
