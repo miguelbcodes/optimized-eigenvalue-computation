@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Otimização e Cálculo Numérico de Autovalores</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/reveal.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/theme/white.css" id="theme">
+  <!-- Code theme: highlight.js "vs" = Visual Studio light (VS Code Light+) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11/build/styles/vs.min.css">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+
+  <style>
+    :root {
+      --ink:    #23272b;   /* headings */
+      --body:   #34383d;   /* body text */
+      --muted:  #6b727a;   /* secondary text */
+      --accent: #3f444a;   /* slate rules / table head / phase bg */
+      --line:   #e4e5e7;   /* hairlines */
+      --gain:   #2f7d4f;   /* semantic positive */
+      --r-heading-color: var(--ink);
+      --r-link-color: #565d65;
+    }
+
+    /* ---- Base typography ---- */
+    .reveal { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      font-weight: 400; color: var(--body); -webkit-font-smoothing: antialiased; }
+    .reveal section { font-size: 30px; line-height: 1.5; }
+    .reveal .slides { text-align: left; }
+    .reveal .slides section.center-slide { text-align: center; }
+
+    .reveal h1, .reveal h2, .reveal h3 {
+      font-family: 'Inter', system-ui, sans-serif; color: var(--ink);
+      line-height: 1.18; margin: 0 0 .55em; text-transform: none; letter-spacing: -0.018em; }
+    .reveal h1 { font-size: 1.7em; font-weight: 700; }
+    .reveal h2 { font-size: 1.28em; font-weight: 700;
+      padding-bottom: .22em; margin-bottom: .7em;
+      border-bottom: 2px solid var(--accent); }
+    .reveal h3 { font-size: 1.0em;  font-weight: 600; color: var(--muted);
+      letter-spacing: -0.005em; }
+
+    .reveal p { margin: 0 0 .55em; }
+    .reveal strong, .reveal b { font-weight: 600; color: var(--ink); }
+    .reveal em { color: var(--body); }
+
+    /* ---- Lists: breathing room + tidy markers ---- */
+    .reveal ul, .reveal ol { margin: .2em 0 .2em 1.1em; }
+    .reveal li { margin: 0 0 .5em; line-height: 1.45; }
+    .reveal li::marker { color: var(--muted); }
+    .reveal ul ul, .reveal ol ol { margin-top: .35em; }
+
+    /* ---- Tables ---- */
+    .reveal table { font-size: 0.68em; margin: 0.5em auto; border-collapse: collapse;
+      box-shadow: 0 1px 6px rgba(0,0,0,.06); border-radius: 6px; overflow: hidden; }
+    .reveal table th { background: var(--accent); color: #fff; font-weight: 600;
+      padding: 8px 16px; letter-spacing: .01em; }
+    .reveal table td { padding: 7px 16px; border-bottom: 1px solid var(--line); }
+    .reveal table tr:last-child td { border-bottom: none; }
+    .reveal table tr:nth-child(even) { background: #f5f6f7; }
+    .reveal table td:first-child, .reveal table th:first-child { font-variant-numeric: tabular-nums; }
+    .gain { color: var(--gain); font-weight: 600; }
+
+    /* ---- Images ---- */
+    .reveal img.chart { max-height: 460px; width: auto; background: #fff;
+      box-shadow: 0 4px 18px rgba(0,0,0,.12); border-radius: 8px;
+      border: 1px solid var(--line); }
+
+    /* ---- Two-column layout ---- */
+    .cols { display: flex; gap: 1.6em; align-items: center; }
+    .cols.top { align-items: flex-start; }
+    .cols > div { flex: 1; min-width: 0; }
+
+    /* ---- Code blocks (VS Code light) ---- */
+    .reveal pre { width: 100%; font-size: 0.46em; box-shadow: 0 2px 10px rgba(0,0,0,.08);
+      margin: .4em 0; border-radius: 8px; }
+    .reveal pre code { font-family: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+      background: #f6f8fa; border: 1px solid var(--line);
+      max-height: 470px; padding: 18px 20px; border-radius: 8px; line-height: 1.5;
+      tab-size: 2; -webkit-font-smoothing: auto; }
+    .reveal code:not(pre code) { font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 0.85em; background: #f1f2f3; color: #2b3a4a;
+      padding: 1px 6px; border-radius: 4px; }
+
+    /* ---- Phase title slides ---- */
+    .phase { background: var(--accent); }
+    .reveal .phase h1, .reveal .phase h2, .reveal .phase p { color: #fff; }
+    .reveal .phase h1 { margin-bottom: .35em; }
+    .phase .kicker { font-size: 0.55em; font-weight: 600; letter-spacing: .3em;
+      opacity: .65; text-transform: uppercase; margin-bottom: 1.2em; }
+
+    /* ---- Utilities ---- */
+    .muted { color: var(--muted); font-size: 0.85em; }
+    .kicker.muted { font-weight: 500; letter-spacing: .04em; }
+    .badge { display: inline-block; background: #eef0f1; color: #4a4f55;
+      border: 1px solid var(--line); border-radius: 999px; padding: 3px 13px;
+      font-size: 0.62em; font-weight: 500; margin: 3px 4px 0 0; }
+    .footnote { position: absolute; bottom: 8px; left: 0; right: 0;
+      font-size: 0.45em; color: var(--muted); text-align: center; }
+
+    /* ---- Slide number ---- */
+    .reveal .slide-number { background: transparent; color: #b6bbc0; font-size: 0.5em; }
+  </style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ============================ ABERTURA ============================ -->
+
+<!-- 1. Capa -->
+<section class="center-slide">
+  <p class="kicker muted">Universidade Federal de Goiás · Equações Diferenciais Ordinárias</p>
+  <h1>Otimização e Cálculo Numérico de Autovalores</h1>
+  <h3>Algoritmo geral (Hessenberg + QR), escalabilidade, otimização simétrica e aplicação em reatores</h3>
+  <p style="margin-top:1.2em;">Antonio Couto&nbsp;<span class="muted">· 202400305</span><br>
+     Miguel Bertol&nbsp;<span class="muted">· 202400315</span></p>
+  <p class="muted">Implementação em C++17</p>
+  <aside class="notes">
+    Projeto numérico em C++17 sobre cálculo de autovalores de matrizes quadradas.
+    Percorre 4 fases: algoritmo clássico, escalabilidade empírica, otimização por
+    simetria, e uma aplicação em dinâmica de reatores. Apresentação de ~15 min.
+  </aside>
+</section>
+
+<!-- 2. Roteiro -->
+<section>
+  <h2>Roteiro</h2>
+  <ul>
+    <li class="fragment"><b>Fase 1</b> — O algoritmo geral: Householder → Hessenberg → iteração QR</li>
+    <li class="fragment"><b>Fase 2</b> — Escalabilidade empírica (tempo e memória)</li>
+    <li class="fragment"><b>Fase 3</b> — Otimização para matrizes simétricas (colapso tridiagonal)</li>
+    <li class="fragment"><b>Fase 4</b> — Aplicação: rede de reatores químicos (CSTRs)</li>
+    <li class="fragment"><b>Discussão</b> — Por que a simetria acelera tanto? CPU ou memória?</li>
+  </ul>
+  <aside class="notes">
+    Mapa da apresentação. Construímos o algoritmo, medimos como escala, otimizamos
+    explorando estrutura, e fechamos com uma aplicação prática + discussão.
+  </aside>
+</section>
+
+<!-- ============================ INTRO & ARQUITETURA ============================ -->
+
+<!-- 3. Introdução -->
+<section>
+  <h2>Introdução</h2>
+  <p>Sistema para cálculo numérico de autovalores de matrizes quadradas genéricas,
+     desenvolvido em <b>C++17</b>.</p>
+  <p class="fragment"><b>Teorema de Abel-Ruffini:</b> para matrizes de ordem $N \geq 5$,
+     <em>não existe fórmula fechada</em> para as raízes do polinômio característico.</p>
+  <p class="fragment">⟹ Métodos <b>iterativos</b> são a única alternativa viável.</p>
+  <aside class="notes">
+    O ponto de partida teórico é Abel-Ruffini: como não há fórmula por radicais para
+    grau ≥ 5, atacar o polinômio característico diretamente não funciona. Por isso
+    todo o projeto se apoia em iteração (QR) sobre transformações de similaridade.
+  </aside>
+</section>
+
+<!-- 4. Arquitetura -->
+<section>
+  <h2>Arquitetura do projeto</h2>
+  <div class="cols">
+    <div>
+      <h3>Estruturas centrais</h3>
+      <ul>
+        <li><code>Matrix</code> — $N\times N$ densa, row-major</li>
+        <li><code>Vector</code> — produto escalar, norma $L_2$</li>
+        <li><code>SymmetricTridiagonal</code> — só <code>diag</code> e <code>offdiag</code></li>
+      </ul>
+    </div>
+    <div>
+      <h3>Princípios</h3>
+      <ul>
+        <li>Semântica de <b>valor</b> (sem mutação in-place)</li>
+        <li>Memória delegada ao <code>std::vector</code></li>
+        <li>Multiplicação em ordem <b>$i$-$k$-$j$</b> (localidade de cache)</li>
+      </ul>
+    </div>
+  </div>
+  <aside class="notes">
+    Módulos com responsabilidades claras. Matrix guarda o vetor contíguo, elemento
+    (i,j) → i·N+j. A ordem de loop i-k-j favorece acesso sequencial à linha esquerda
+    e à de resultado. SymmetricTridiagonal é a chave da Fase 3.
+  </aside>
+</section>
+
+<!-- 5. SymmetricTridiagonal -->
+<section>
+  <h2>A estrutura <code>SymmetricTridiagonal</code></h2>
+  <p>Armazena apenas <b>dois vetores</b> em vez de uma matriz densa:</p>
+  <ul>
+    <li><code>diag</code> — $N$ entradas (diagonal principal)</li>
+    <li><code>offdiag</code> — $N-1$ entradas (sub/superdiagonal)</li>
+  </ul>
+  <p class="fragment">Representação compacta de $\mathbf{O(N)}$ em vez de $O(N^2)$ —
+     central para a otimização da <b>Fase 3</b>.</p>
+  <aside class="notes">
+    Uma tridiagonal simétrica é totalmente descrita por diagonal + uma banda. Guardar
+    só isso troca O(N²) por O(N) e ainda dá localidade de cache perfeita.
+  </aside>
+</section>
+
+<!-- ============================ FASE 1 ============================ -->
+
+<section>
+  <!-- 6. Capa da fase 1 -->
+  <section class="phase center-slide">
+    <p class="kicker">Fase 1</p>
+    <h1>O Algoritmo Geral</h1>
+    <p>Householder → Hessenberg → Iteração QR com shift de Wilkinson</p>
+    <aside class="notes">
+      Estratégia em duas etapas: reduzir a matriz densa a Hessenberg (custo finito),
+      depois iterar QR sobre essa forma barata até a subdiagonal zerar.
+    </aside>
+  </section>
+
+  <!-- 7. Householder: refletor -->
+  <section>
+    <h2>Transformações de Householder</h2>
+    <p>Refletor ortogonal: $\;P = I - 2\mathbf{v}\mathbf{v}^T$</p>
+    <p>Dado $\mathbf{x}\in\mathbb{R}^m$, escolhemos $\mathbf{v}$ para zerar tudo menos a 1ª componente:</p>
+    $$P\mathbf{x} = -\text{sign}(x_0)\,\|\mathbf{x}\|_2\cdot\mathbf{e}_1$$
+    <aside class="notes">
+      P é simétrica e ortogonal (P = Pᵀ = P⁻¹). Geometricamente reflete x sobre um
+      hiperplano de forma que ele caia inteiro no eixo e₁.
+    </aside>
+  </section>
+
+  <!-- 8. Householder: construção de v -->
+  <section>
+    <h2>Construção de $\mathbf{v}$ — estabilidade</h2>
+    $$\mathbf{v} = \frac{\mathbf{x} + \text{sign}(x_0)\|\mathbf{x}\|\mathbf{e}_1}
+                        {\|\mathbf{x} + \text{sign}(x_0)\|\mathbf{x}\|\mathbf{e}_1\|}$$
+    <p>A escolha do sinal $\text{sign}(x_0)$ <b>evita cancelamento catastrófico</b>:
+       somamos na direção do componente dominante, e o denominador nunca se aproxima de zero.</p>
+    <pre><code class="language-cpp" data-trim data-line-numbers>// householder.cpp
+double sign = (x[0] >= 0.0) ? 1.0 : -1.0;
+v[0] = x[0] + sign * x_norm;   // soma na direção dominante
+for (std::size_t i = 1; i < len; ++i) v[i] = x[i];
+double v_norm = v.norm();
+for (std::size_t i = 0; i < len; ++i) v[i] /= v_norm;</code></pre>
+    <aside class="notes">
+      Se somássemos com o sinal "errado", x[0] e ±‖x‖ poderiam quase se cancelar,
+      perdendo dígitos. Somar com sign(x0) garante magnitude máxima no numerador.
+    </aside>
+  </section>
+
+  <!-- 9. Householder: aplicação implícita -->
+  <section>
+    <h2>Aplicação implícita — sem montar $P$</h2>
+    <p>Para $PA$ (pela esquerda), por coluna $j$: projeção $p=\mathbf{v}^T\mathbf{a}_j$,
+       depois $a_{ij} \leftarrow a_{ij} - 2v_i\,p$.</p>
+    <pre><code class="language-cpp" data-trim>// apply_householder_left — custo O(m) por coluna, nunca forma P
+for (std::size_t col = col_start; col < col_end; ++col) {
+    double projection = 0.0;
+    for (std::size_t i = 0; i < len; ++i)
+        projection += v[i] * A(row_start + i, col);
+    for (std::size_t i = 0; i < len; ++i)
+        A(row_start + i, col) -= 2.0 * v[i] * projection;
+}</code></pre>
+    <p class="muted">A aplicação pela direita ($AP$) é a lógica transposta, sobre linhas.</p>
+    <aside class="notes">
+      Nunca construímos a matriz P (que custaria O(m²) de memória e O(m³) por produto).
+      Exploramos P = I − 2vvᵀ para aplicar em O(m) por coluna.
+    </aside>
+  </section>
+
+  <!-- 10. Hessenberg: definição -->
+  <section>
+    <h2>Redução à forma de Hessenberg</h2>
+    <p>Hessenberg superior: zera tudo abaixo da 1ª subdiagonal.</p>
+    $$H(i,j) = 0 \quad \text{para } i > j+1$$
+    <p>Reduzimos $A$ por <b>transformações de similaridade</b> $A \leftarrow P_kAP_k^T$,
+       que <em>preservam os autovalores</em>.</p>
+    <div class="badge">$N-2$ passos</div>
+    <div class="badge">custo $O(N^3)$</div>
+    <aside class="notes">
+      Hessenberg é "quase triangular". Não diagonalizamos de uma vez (impossível em
+      passos finitos), mas chegamos numa forma onde cada iteração QR fica barata.
+    </aside>
+  </section>
+
+  <!-- 11. Hessenberg: passos -->
+  <section>
+    <h2>Hessenberg — passo $k$</h2>
+    <ol>
+      <li class="fragment">Extrair a subcoluna $\mathbf{x}=A(k\!+\!1\!:\!N\!-\!1,\;k)$</li>
+      <li class="fragment">Computar o refletor $\mathbf{v}$ a partir de $\mathbf{x}$</li>
+      <li class="fragment">Aplicar a similaridade $A \leftarrow P_kAP_k^T$
+          (esquerda zera a subcoluna, direita mantém a similaridade)</li>
+    </ol>
+    <p class="fragment">Após $N-2$ passos: $H$ em forma de Hessenberg, mesmos autovalores de $A$.
+       Custo $O(N^3)$, dominado pelos produtos matriz-refletor.</p>
+    <aside class="notes">
+      A aplicação pela esquerda cria os zeros; a aplicação pela direita é obrigatória
+      para que a transformação seja de similaridade (PₖAPₖᵀ) e preserve o espectro.
+    </aside>
+  </section>
+
+  <!-- 12. QR: ideia -->
+  <section>
+    <h2>Iteração QR</h2>
+    <p>Dada $H_k$, fatoramos $H_k = Q_kR_k$ e recombinamos:</p>
+    $$H_{k+1} = R_kQ_k = Q_k^T H_k Q_k$$
+    <p class="fragment">Mesma similaridade ⟹ <b>autovalores preservados</b>; sob certas
+       condições a subdiagonal converge a zero, revelando os autovalores na diagonal.</p>
+    <aside class="notes">
+      H_{k+1} = R Q = Qᵀ(QR)Q = Qᵀ H Q: similaridade ortogonal. Iterando, a matriz
+      tende a (quase) triangular e os autovalores aparecem na diagonal.
+    </aside>
+  </section>
+
+  <!-- 13. QR: Givens -->
+  <section>
+    <h2>Fatoração QR via rotações de Givens</h2>
+    <p>$N-1$ rotações, cada uma zerando um elemento da subdiagonal:</p>
+    $$\begin{bmatrix} c & -s \\ s & c \end{bmatrix}
+      \begin{bmatrix} h_{ii} \\ h_{i+1,i} \end{bmatrix}
+      = \begin{bmatrix} r \\ 0 \end{bmatrix}$$
+    <p>Coeficientes com <b>branching numérico</b>: se $|h_{i+1,i}| > |h_{ii}|$,
+       usa-se $\tau = -h_{ii}/h_{i+1,i}$ para evitar <em>overflow</em>.</p>
+    <aside class="notes">
+      Givens é ideal para Hessenberg: só há um elemento por coluna abaixo da diagonal.
+      O branching escolhe a forma estável da tangente, evitando dividir por número
+      pequeno.
+    </aside>
+  </section>
+
+  <!-- 14a. Por que o shift? (além do enunciado) -->
+  <section>
+    <h2>Por que precisamos do shift?</h2>
+    <p><span class="badge">além do enunciado</span> O enunciado (§1.2) pede QR
+       <b>puro</b>: $H=QR$, $H_{k+1}=R_kQ_k$, iterar até convergir.</p>
+    <p class="fragment">Mas o QR puro converge só <b>linearmente</b>, à taxa
+       $|\lambda_{i+1}/\lambda_i|$. Com autovalores de magnitude próxima
+       (comuns nas matrizes aleatórias da Fase 2) a razão $\to 1$ e a convergência
+       <b>estagna</b>.</p>
+    <p class="fragment">No limite — autovalores de igual magnitude, ex. pares $\pm\lambda$ —
+       a iteração não-deslocada <b>nunca converge</b>.</p>
+    <p class="fragment muted">⟹ Sem shift, o próprio benchmark da Fase 2 não terminaria.
+       O shift não é refinamento: é <b>necessário</b> para a corretude prática.</p>
+    <aside class="notes">
+      Ponto importante de honestidade com o enunciado: ele especifica QR puro. Adicionamos
+      o shift de Wilkinson como decisão de engenharia porque o QR não-deslocado falha em
+      terminar para entradas genéricas. Esta é a motivação; o próximo slide mostra o
+      mecanismo.
+    </aside>
+  </section>
+
+  <!-- 14b. QR: Wilkinson -->
+  <section>
+    <h2>Deslocamento de Wilkinson</h2>
+    <p>Acelera a convergência escolhendo um shift $\mu$ a cada iteração:</p>
+    $$\mu = \text{autovalor de }
+      \begin{bmatrix} h_{n-1,n-1} & h_{n-1,n} \\ h_{n,n-1} & h_{n,n} \end{bmatrix}
+      \text{ mais próximo de } h_{n,n}$$
+    <p>Aplica QR a $(H-\mu I)$ e recupera o shift ⟹ $h_{n,n-1}$ converge
+       <b>cubicamente</b> para zero.</p>
+    <aside class="notes">
+      Sem shift, QR converge linearmente e pode ser lentíssimo. O shift de Wilkinson,
+      tirado do bloco 2×2 inferior, dá convergência cúbica na prática — o ganho mais
+      importante do método.
+    </aside>
+  </section>
+
+  <!-- 15. QR: deflação -->
+  <section>
+    <h2>Deflação</h2>
+    <p>Quando a subdiagonal é desprezível (critério relativo, $\varepsilon=10^{-10}$):</p>
+    $$|h_{i+1,i}| < \varepsilon\,(|h_{ii}| + |h_{i+1,i+1}|)$$
+    <ul>
+      <li>Bloco $1\times1$ ⟹ autovalor <b>real</b></li>
+      <li>Bloco $2\times2$ com discriminante negativo ⟹ par <b>conjugado complexo</b></li>
+    </ul>
+    <p class="muted">Custo: $O(N^2)$ por iteração QR · $O(N)$ iterações ⟹ <b>$O(N^3)$</b> na fase QR.</p>
+    <aside class="notes">
+      A deflação divide o problema em blocos menores independentes assim que um
+      acoplamento some. Blocos 2×2 capturam autovalores complexos conjugados sem
+      precisar de aritmética complexa explícita.
+    </aside>
+  </section>
+</section>
+
+<!-- ============================ FASE 2 ============================ -->
+
+<section>
+  <!-- 16. Capa fase 2 -->
+  <section class="phase center-slide">
+    <p class="kicker">Fase 2</p>
+    <h1>Escalabilidade do Algoritmo Geral</h1>
+    <p>Benchmark: $N\in\{10,50,100,250,500,1000\}$ · 20 amostras por tamanho</p>
+    <aside class="notes">
+      Medimos tempo de execução e pico de memória RSS, 20 repetições por N, para
+      extrair médias/medianas e ajustar uma lei de potência empírica.
+    </aside>
+  </section>
+
+  <!-- 17. Ambiente experimental -->
+  <section>
+    <h2>Ambiente experimental</h2>
+    <div class="cols">
+      <div>
+        <h3>Hardware</h3>
+        <ul>
+          <li>CPU: <b>Intel Core i5-13450HX</b></li>
+          <li>10 núcleos / 16 threads · até 4,6 GHz</li>
+          <li>Cache L1d 416 KiB · L2 9,5 MiB · <b>L3 20 MiB</b></li>
+          <li>RAM: <b>16 GB</b></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Software</h3>
+        <ul>
+          <li>SO: <b>Ubuntu 24.04 LTS</b></li>
+          <li>Compilador: <b>g++ 13.3.0</b></li>
+          <li>Flags: <code>-std=c++17 -O2</code></li>
+        </ul>
+      </div>
+    </div>
+    <p class="fragment muted">As bandas $O(N)$ da tridiagonal (Fase 3) cabem
+       confortavelmente em cache L1/L2 para todos os $N$ testados.</p>
+    <aside class="notes">
+      Contexto importante para interpretar os tempos. O L2 de 9,5 MiB e L3 de 20 MiB
+      explicam por que o caminho tridiagonal, que toca só dois vetores de N doubles,
+      raramente sofre cache miss — gancho para a discussão final.
+    </aside>
+  </section>
+
+  <!-- 18. Resultados: tempo (algoritmo geral) -->
+  <section>
+    <h2>Tempo — algoritmo geral <span class="muted">(mediana de 20 amostras)</span></h2>
+    <div class="cols">
+      <div>
+        <table>
+          <thead><tr><th>$N$</th><th>tempo (ms)</th></tr></thead>
+          <tbody>
+            <tr><td>10</td><td>0,02</td></tr>
+            <tr><td>50</td><td>1,09</td></tr>
+            <tr><td>100</td><td>7,55</td></tr>
+            <tr><td>250</td><td>106,4</td></tr>
+            <tr><td>500</td><td>823,2</td></tr>
+            <tr><td>1000</td><td>6685,6</td></tr>
+          </tbody>
+        </table>
+        <p class="muted" style="font-size:0.8em">Ajuste empírico:
+           $T(N)\sim O(N^{2{,}76})$ — compatível com $O(N^3)$ teórico</p>
+      </div>
+      <div><img class="chart" src="scalability_time_general.png" alt="Escalabilidade de tempo (geral)">
+        <p class="muted" style="text-align:center; font-size:0.62em; margin-top:.25em;">gráfico: média ± desvio</p></div>
+    </div>
+    <aside class="notes">
+      Medianas de benchmark_results.csv. O expoente 2,76 fica abaixo do O(N³) teórico
+      porque o shift de Wilkinson corta o número de iterações e os N testados ainda não
+      saturam o assintótico. Aqui ainda só falamos do algoritmo geral — a otimização vem
+      na Fase 3.
+    </aside>
+  </section>
+
+  <!-- 19. Resultados: memória (algoritmo geral) -->
+  <section>
+    <h2>Memória RSS — algoritmo geral <span class="muted">(mediana de 20 amostras)</span></h2>
+    <div class="cols">
+      <div>
+        <table>
+          <thead><tr><th>$N$</th><th>memória (KB)</th></tr></thead>
+          <tbody>
+            <tr><td>10</td><td>0 <span class="muted" style="font-size:0.8em">(&lt; granul.)</span></td></tr>
+            <tr><td>50</td><td>40</td></tr>
+            <tr><td>100</td><td>156</td></tr>
+            <tr><td>250</td><td>976</td></tr>
+            <tr><td>500</td><td>3908</td></tr>
+            <tr><td>1000</td><td>15636</td></tr>
+          </tbody>
+        </table>
+        <p class="muted" style="font-size:0.8em">$M(N)\sim O(N^{2})$ —
+           aloca duas matrizes densas $N\times N$ ($2N^2$ doubles)</p>
+      </div>
+      <div><img class="chart" src="scalability_memory_general.png" alt="Escalabilidade de memória (geral)">
+        <p class="muted" style="text-align:center; font-size:0.62em; margin-top:.25em;">gráfico: média ± desvio</p></div>
+    </div>
+    <aside class="notes">
+      M(N) ~ O(N²) é esperado: o algoritmo geral aloca duas matrizes densas N×N
+      (Hessenberg + forma de Schur). N=10 fica abaixo da granularidade de medição RSS
+      (0 KB). Ainda sem comparação — só o caminho geral.
+    </aside>
+  </section>
+</section>
+
+<!-- ============================ FASE 3 ============================ -->
+
+<section>
+  <!-- 20. Capa fase 3 -->
+  <section class="phase center-slide">
+    <p class="kicker">Fase 3</p>
+    <h1>Otimização para Matrizes Simétricas</h1>
+    <p>$A = A^T \Rightarrow$ o problema colapsa para tridiagonal</p>
+    <aside class="notes">
+      A grande sacada: se a entrada é simétrica, toda a maquinaria fica drasticamente
+      mais barata, sem mudar a resposta.
+    </aside>
+  </section>
+
+  <!-- 21. Colapso tridiagonal -->
+  <section>
+    <h2>O colapso tridiagonal</h2>
+    <p>Se $A=A^T$, a redução de Householder produz uma <b>tridiagonal simétrica</b>.</p>
+    <p><b>Prova.</b> Cada $P_k = P_k^T = P_k^{-1}$. A similaridade preserva a simetria:</p>
+    $$(P_kAP_k^T)^T = P_kA^TP_k^T = P_kAP_k^T$$
+    <p class="fragment">Simétrica <b>e</b> Hessenberg (nula abaixo da subdiagonal)
+       ⟹ só sobra a diagonal e as duas adjacentes ⟹ <b>tridiagonal</b>.</p>
+    <aside class="notes">
+      A simetria é invariante sob as reflexões. E a interseção de "Hessenberg superior"
+      com "simétrica" é exatamente a forma tridiagonal — o espelho força os zeros
+      acima também.
+    </aside>
+  </section>
+
+  <!-- 22. Demonstração empírica -->
+  <section>
+    <h2>Demonstração empírica ($N=5$)</h2>
+    <p>O programa aplica o algoritmo geral de Hessenberg a uma matriz simétrica e
+       verifica que a maior entrada <b>fora da banda tridiagonal</b> é:</p>
+    <p style="text-align:center; font-size:1.4em; color:#2f7d4f;">
+       $\sim 10^{-16}$ &nbsp;<span class="muted" style="font-size:0.6em">(precisão de máquina)</span></p>
+    <p>Ou seja: o colapso não é só teórico — acontece até o último bit.</p>
+    <aside class="notes">
+      Validação numérica do teorema: rodamos o caminho denso "ingênuo" sobre uma matriz
+      simétrica e confirmamos que tudo fora da tridiagonal é ruído de arredondamento.
+    </aside>
+  </section>
+
+  <!-- 23. Redução otimizada rank-2 -->
+  <section>
+    <h2>Redução tridiagonal otimizada</h2>
+    <p>Atualização simétrica de <b>rank-2</b> no bloco $B=A(k\!+\!1\!:,\,k\!+\!1\!:)$:</p>
+    <div class="cols">
+      <div>
+        <p class="fragment">$\mathbf{p} = 2B\mathbf{v}$</p>
+        <p class="fragment">$\mathbf{w} = \mathbf{p} - (\mathbf{v}^T\mathbf{p})\mathbf{v}$</p>
+        <p class="fragment">$B \leftarrow B - \mathbf{w}\mathbf{v}^T - \mathbf{v}\mathbf{w}^T$</p>
+      </div>
+      <div>
+        <pre><code class="language-cpp" data-trim data-line-numbers>// tridiagonal.cpp — rank-2 update
+for (std::size_t i = 0; i < m; ++i) {
+    double sum = 0.0;
+    for (std::size_t j = 0; j < m; ++j)
+        sum += A(col+1+i, col+1+j) * v[j];
+    p[i] = 2.0 * sum;          // p = 2 B v
+}
+// w = p - (vᵀp) v ;  B -= w vᵀ + v wᵀ</code></pre>
+      </div>
+    </div>
+    <p class="muted">Preserva a simetria algebricamente; estado próprio em $O(N)$.</p>
+    <aside class="notes">
+      Em vez de aplicar o refletor duas vezes (esquerda e direita) numa matriz que
+      esquece a simetria, fazemos uma única atualização rank-2 que mantém B simétrica
+      a cada passo. Resultado guardado como SymmetricTridiagonal.
+    </aside>
+  </section>
+
+  <!-- 24. QL implícito -->
+  <section>
+    <h2>Iteração QL implícita (<code>tqli</code>)</h2>
+    <p>QR sobre a forma tridiagonal, operando só nos dois vetores $d$ (diag) e $e$ (subdiag).
+       Para cada índice $l$:</p>
+    <ol>
+      <li class="fragment">Achar o menor $m>l$ com $|e_m|\le\varepsilon(|d_m|+|d_{m+1}|)$</li>
+      <li class="fragment">Shift de Wilkinson:
+        $g=\dfrac{d_{l+1}-d_l}{2e_l},\;\; g=d_m-d_l+\dfrac{e_l}{g+\text{sign}(g)\sqrt{g^2+1}}$</li>
+      <li class="fragment">Cadeia de rotações de Givens de $m-1$ até $l$, atualizando só $d$ e $e$
+        — cada rotação $O(1)$, varredura $O(N)$</li>
+    </ol>
+    <p class="fragment muted">$O(N)$ por iteração · $O(N)$ iterações ⟹ <b>$O(N^2)$</b> total
+       (vs. $O(N^3)$ do geral).</p>
+    <aside class="notes">
+      Variante clássica tqli de Numerical Recipes. A diferença essencial: cada rotação
+      toca apenas vizinhos imediatos (O(1)), não O(N) colunas. Por isso o custo por
+      iteração cai de O(N²) para O(N).
+    </aside>
+  </section>
+
+  <!-- 25. Comparação visual: agora sobrepomos os dois algoritmos -->
+  <section>
+    <h2>Comparação — agora sobrepomos os dois</h2>
+    <div class="cols">
+      <div><img class="chart" src="scalability_time_comparison.png" alt="Comparação de tempo"></div>
+      <div><img class="chart" src="scalability_memory_comparison.png" alt="Comparação de memória"></div>
+    </div>
+    <p class="muted" style="text-align:center;">Mesmos eixos da Fase 2, agora com o caminho
+       simétrico (verde) sobreposto — a separação cresce com $N$.
+       <br><span style="font-size:0.85em;">gráficos: média ± desvio de 20 amostras</span></p>
+    <aside class="notes">
+      Esta é a "virada" didática: retomamos exatamente os gráficos da Fase 2 e
+      sobrepomos o algoritmo otimizado. A curva verde descola da cinza conforme N cresce,
+      tornando o ganho visualmente óbvio antes de quantificá-lo na tabela seguinte.
+    </aside>
+  </section>
+
+  <!-- 26. Resultados comparativos (números) -->
+  <section>
+    <h2>Resultados comparativos <span class="muted">(ganhos pela mediana de 20 amostras)</span></h2>
+    <div class="cols">
+      <div>
+        <table>
+          <thead><tr><th>$N$</th><th>ganho tempo</th><th>ganho memória</th></tr></thead>
+          <tbody>
+            <tr><td>10</td><td>50%</td><td>—</td></tr>
+            <tr><td>50</td><td>61%</td><td>60%</td></tr>
+            <tr><td>100</td><td>64%</td><td>51%</td></tr>
+            <tr><td>250</td><td>65%</td><td>49%</td></tr>
+            <tr><td>500</td><td>65%</td><td>50%</td></tr>
+            <tr><td>1000</td><td class="gain">67%</td><td>50%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <ul>
+          <li>Tempo: $O(N^{2{,}66})$ vs $O(N^{2{,}76})$</li>
+          <li>Memória: ambos $O(N^2)$, coef. tri ≈ <b>metade</b></li>
+          <li>Ganho de tempo <b>cresce</b> com $N$ (efeito de cache)</li>
+        </ul>
+      </div>
+    </div>
+    <aside class="notes">
+      O passo denso mais caro (Hessenberg) aloca duas matrizes N×N; o tridiagonal opera
+      sobre O(N) de estado próprio. A matriz de entrada A, compartilhada, ainda domina a
+      medição RSS — por isso o ganho de memória satura em ~50%.
+    </aside>
+  </section>
+</section>
+
+<!-- ============================ FASE 4 ============================ -->
+
+<section>
+  <!-- 26. Capa fase 4 -->
+  <section class="phase center-slide">
+    <p class="kicker">Fase 4</p>
+    <h1>Rede de Reatores (CSTRs)</h1>
+    <p>$N=100$ reatores de mistura perfeita em série</p>
+    <aside class="notes">
+      Aplicação prática que fecha o ciclo: uma planta industrial cuja dinâmica é
+      governada por uma matriz tridiagonal simétrica — exatamente o caso otimizado.
+    </aside>
+  </section>
+
+  <!-- 27. Modelo -->
+  <section>
+    <h2>O modelo</h2>
+    <p>Dinâmica de concentrações por um sistema linear de EDOs:</p>
+    $$\frac{d\mathbf{C}}{dt} = A\mathbf{C}$$
+    <p>$A$ é <b>tridiagonal simétrica</b>:</p>
+    <ul>
+      <li>Diagonal $-2{,}5$ — perda por reação e escoamento</li>
+      <li>Sub/superdiagonais $+1{,}0$ — troca difusiva entre vizinhos</li>
+    </ul>
+    <p class="muted">Construída diretamente como <code>SymmetricTridiagonal</code> ⟹ caminho otimizado.</p>
+    <aside class="notes">
+      Cada reator troca massa só com os vizinhos imediatos: isso dá a estrutura
+      tridiagonal. Autovalores de A determinam a estabilidade e a rigidez do sistema.
+    </aside>
+  </section>
+
+  <!-- 28. Estabilidade -->
+  <section>
+    <h2>Análise 1 — Estabilidade</h2>
+    <p>Fórmula analítica dos autovalores (tridiagonal simétrica de Toeplitz):</p>
+    $$\lambda_k = -2{,}5 + 2\cos\!\left(\frac{k\pi}{N+1}\right)$$
+    <p>Máximo: $\lambda_{\max} = -2{,}5 + 2\cos\!\left(\dfrac{\pi}{101}\right) \approx -0{,}50$</p>
+    <p class="fragment">Todos os autovalores têm $\text{Re}<0$ ⟹ sistema
+       <b>assintoticamente estável</b>: as concentrações convergem ao estado estacionário.</p>
+    <aside class="notes">
+      A fórmula fechada existe porque é Toeplitz tridiagonal — e serve de gabarito para
+      validar o autovalor numérico. Re(λ) < 0 para todos significa decaimento garantido.
+    </aside>
+  </section>
+
+  <!-- 29. Rigidez -->
+  <section>
+    <h2>Análise 2 — Rigidez (<em>stiffness</em>)</h2>
+    $$S = \frac{\max|\text{Re}(\lambda_i)|}{\min|\text{Re}(\lambda_i)|}
+        = \frac{|\lambda_{\min}|}{|\lambda_{\max}|}
+        \approx \frac{4{,}50}{0{,}50} \approx 9$$
+    <p class="fragment">$S\approx 9$ é <b>baixo</b> (muito abaixo do limiar $10^3$) ⟹
+       sistema <b>não-rígido</b>.</p>
+    <p class="fragment">Consequência de engenharia: pode-se usar com segurança um solver
+       <b>explícito</b> (RK4), evitando o custo de métodos implícitos.</p>
+    <aside class="notes">
+      A razão de rigidez mede a separação de escalas de tempo. Baixa rigidez = todas as
+      dinâmicas têm velocidade comparável, então um RK4 explícito é estável com passo
+      razoável. Decisão prática tirada diretamente do espectro.
+    </aside>
+  </section>
+</section>
+
+<!-- ============================ DISCUSSÃO / FECHAMENTO ============================ -->
+
+<!-- 30. Por que simétricas são mais rápidas -->
+<section>
+  <h2>Por que a simetria acelera tanto?</h2>
+  <p>Três efeitos acumulados, todos derivados de $A=A^T$:</p>
+  <ol>
+    <li class="fragment"><b>Redução ao tridiagonal</b> — representação cai de $O(N^2)$ para $O(N)$;
+        cada operação toca muito menos dado.</li>
+    <li class="fragment"><b>Queda de complexidade do QR</b> — cada rotação afeta $O(1)$ entradas
+        (não $O(N)$ colunas) ⟹ $O(N^3)\to O(N^2)$.</li>
+    <li class="fragment"><b>Localidade de cache</b> — dois vetores contíguos cabem em L1/L2;
+        o caminho denso percorre matrizes com <em>stride</em> variável. Amplifica o ganho
+        para $N\ge 250$.</li>
+  </ol>
+  <aside class="notes">
+    Os dois primeiros são algorítmicos; o terceiro é de arquitetura. Juntos explicam por
+    que o ganho de tempo cresce com N: o efeito de cache só "morde" quando a matriz densa
+    deixa de caber confortavelmente nos níveis rápidos.
+  </aside>
+</section>
+
+<!-- 31. CPU ou memória -->
+<section>
+  <h2>O gargalo é CPU ou memória?</h2>
+  <p>Resposta: <b>CPU</b>.</p>
+  <ul>
+    <li>Ambos escalam $O(N^2)$ em memória</li>
+    <li>Ganho de <b>tempo</b> (67% em $N=1000$) supera o de <b>memória</b> (50%)</li>
+  </ul>
+  <p class="fragment">Se memória fosse o limite, os ganhos seriam proporcionais. A diferença
+     mostra que a <b>redução de operações de ponto flutuante</b> — não a economia de alocação —
+     é o fator dominante.</p>
+  <aside class="notes">
+    Argumento-chave: comparar a razão dos ganhos. Tempo 67% > memória 50% só faz sentido
+    se o que limita é a quantidade de flops, não o tamanho da pegada de memória.
+  </aside>
+</section>
+
+<!-- 32. Conclusão -->
+<section class="center-slide">
+  <h2>Conclusão</h2>
+  <div style="text-align:left; max-width:80%; margin:0 auto;">
+    <ul>
+      <li><b>Fase 1</b> — algoritmo geral Hessenberg + QR (Wilkinson), $O(N^3)$</li>
+      <li><b>Fase 2</b> — empírico: $T\sim O(N^{2{,}76})$, $M\sim O(N^2)$</li>
+      <li><b>Fase 3</b> — simetria ⟹ tridiagonal ⟹ $O(N^2)$, até <b>67%</b> mais rápido</li>
+      <li><b>Fase 4</b> — reatores estáveis e não-rígidos ⟹ RK4 explícito</li>
+    </ul>
+    <p style="margin-top:1em; text-align:center;"><b>Explorar a estrutura do problema
+       vale mais que força bruta.</b></p>
+  </div>
+  <p class="muted" style="margin-top:1em;">Obrigado! · Antonio Couto · Miguel Bertol · UFG</p>
+  <aside class="notes">
+    Fechamento: a mensagem que liga as quatro fases é que reconhecer e explorar estrutura
+    (simetria) transforma a complexidade e a viabilidade prática do método.
+  </aside>
+</section>
+
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/reveal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5/plugin/notes/notes.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5/plugin/highlight/highlight.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5/plugin/math/math.js"></script>
+<script>
+  Reveal.initialize({
+    hash: true,
+    slideNumber: 'c/t',
+    transition: 'slide',
+    pdfSeparateFragments: false,   // fragments não viram páginas extras no PDF
+    katex: {
+      delimiters: [
+        { left: '$$', right: '$$', display: true },
+        { left: '$',  right: '$',  display: false },
+        { left: '\\(', right: '\\)', display: false },
+        { left: '\\[', right: '\\]', display: true }
+      ],
+      ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+    },
+    plugins: [ RevealMath.KaTeX, RevealHighlight, RevealNotes ]
+  });
+</script>
+</body>
+</html>
