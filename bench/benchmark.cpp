@@ -31,13 +31,15 @@ static void emit_row(const char* algorithm, int n, double elapsed_ms, long memor
               << memory_kb << std::endl;
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     const int sizes[] = {10, 50, 100, 250, 500, 1000};
     const int num_sizes = 6;
     const double tolerance = 1e-10;
+    const int samples = (argc > 1) ? std::atoi(argv[1]) : 1;
 
     std::cout << "algorithm,N,time_ms,memory_kb" << std::endl;
 
+    for (int sample = 0; sample < samples; ++sample) {
     for (int s = 0; s < num_sizes; ++s) {
         int n = sizes[s];
 
@@ -79,7 +81,8 @@ int main() {
         }
         malloc_trim(0);
 
-        std::cerr << "N=" << n << " done" << std::endl;
+        std::cerr << "sample=" << (sample+1) << "/" << samples << " N=" << n << " done" << std::endl;
+    }
     }
 
     return 0;

@@ -22,17 +22,12 @@ make benchmark  # builds the benchmark program (build/benchmark)
 
 ## Running the Benchmark
 
-The benchmark outputs CSV data to stdout. To collect results across multiple runs:
+The benchmark outputs CSV data to stdout. It accepts an optional argument for the number of samples per matrix size (default: 1):
 
 ```bash
-# First run — creates the file with the CSV header
-./build/benchmark > benchmark_results.csv
-
-# Subsequent runs — appends only the data rows (skips the header)
-./build/benchmark | tail -n +2 >> benchmark_results.csv
+./build/benchmark 20 > benchmark_results.csv   # 20 samples per N
+./build/benchmark > benchmark_results.csv       # single sample per N
 ```
-
-`tail -n +2` starts output from line 2 onwards, skipping the header so it doesn't appear duplicated in the middle of the CSV.
 
 ## Generating Scalability Plots
 
