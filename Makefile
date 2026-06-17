@@ -6,7 +6,7 @@ BENCHDIR = bench
 BUILDDIR = build
 INCLUDEDIR = include
 
-SRCS = matrix.cpp vector.cpp householder.cpp hessenberg.cpp qr.cpp
+SRCS = matrix.cpp vector.cpp householder.cpp hessenberg.cpp qr.cpp tridiagonal.cpp
 LIB_OBJS = $(patsubst %.cpp,$(BUILDDIR)/%.o,$(SRCS))
 MAIN_OBJ = $(BUILDDIR)/main.o
 BENCH_OBJ = $(BUILDDIR)/benchmark.o
