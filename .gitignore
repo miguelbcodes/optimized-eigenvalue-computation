@@ -1,3 +1,8 @@
 build/
 .venv/
 bench/results/
+
+# Generated benchmark artifacts (written to the working directory)
+benchmark_results.csv
+scalability_time.png
+scalability_memory.png
