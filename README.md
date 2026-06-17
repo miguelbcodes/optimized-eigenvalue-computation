@@ -54,3 +54,13 @@ For **symmetric** matrices (`A = Aᵀ`) the project ships a dedicated, faster pa
 Running `./build/compute-eigenvalues` prints a demonstration (N=5) that the general Householder reduction applied to a symmetric matrix collapses to symmetric tridiagonal form, then computes the eigenvalues through the optimized path.
 
 The benchmark runs **both** the general and the optimized algorithm on the same symmetric matrix for every `N`, emitting `hessenberg_qr` and `tridiagonal_qr` rows so the plots and gain table can compare them directly.
+
+## Practical Application — Reactor Network (Phase 4)
+
+Implements §5 of the [Project Statement](./project-statement.pdf): eigenvalue analysis of a CSTR reactor network for stability and stiffness classification.
+
+```bash
+make reactor                            # builds build/reactor-network
+./build/reactor-network                 # default: N=100, tolerance=1e-10
+./build/reactor-network --n 50 --epsilon 1e-12
+```

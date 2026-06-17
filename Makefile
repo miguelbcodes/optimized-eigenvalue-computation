@@ -10,9 +10,11 @@ SRCS = matrix.cpp vector.cpp householder.cpp hessenberg.cpp qr.cpp tridiagonal.c
 LIB_OBJS = $(patsubst %.cpp,$(BUILDDIR)/%.o,$(SRCS))
 MAIN_OBJ = $(BUILDDIR)/main.o
 BENCH_OBJ = $(BUILDDIR)/benchmark.o
+REACTOR_OBJ = $(BUILDDIR)/reactor.o
 
 TARGET = $(BUILDDIR)/compute-eigenvalues
 BENCHMARK = $(BUILDDIR)/benchmark
+REACTOR = $(BUILDDIR)/reactor-network
 
 all: $(TARGET)
 
@@ -20,6 +22,9 @@ $(TARGET): $(MAIN_OBJ) $(LIB_OBJS) | $(BUILDDIR)
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 $(BENCHMARK): $(BENCH_OBJ) $(LIB_OBJS) | $(BUILDDIR)
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+$(REACTOR): $(REACTOR_OBJ) $(LIB_OBJS) | $(BUILDDIR)
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 $(BUILDDIR)/%.o: $(SRCDIR)/%.cpp | $(BUILDDIR)
@@ -33,7 +38,9 @@ $(BUILDDIR):
 
 benchmark: $(BENCHMARK)
 
+reactor: $(REACTOR)
+
 clean:
 	rm -rf $(BUILDDIR)
 
-.PHONY: clean all benchmark
+.PHONY: clean all benchmark reactor
