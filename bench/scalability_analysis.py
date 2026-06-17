@@ -24,7 +24,7 @@ def read_csv(filename):
 def aggregate(rows, algo):
     filtered = [r for r in rows if r["algorithm"] == algo]
     if not filtered:
-        return None, None, None, None, None
+        return None, None, None, None
     sizes = np.array([r["N"] for r in filtered])
     times = np.array([r["time_ms"] for r in filtered])
     mems = np.array([r["memory_kb"] for r in filtered])
@@ -72,6 +72,27 @@ def plot_metric(algos_data, ylabel, title, fit_min_x, outfile):
     fig.savefig(outfile, dpi=150)
     print(f"Saved {outfile}")
 
+def report_gains(rows, general="hessenberg_qr", optimized="tridiagonal_qr"):
+    sizes_g, time_g, mem_g, _ = aggregate(rows, general)
+    sizes_o, time_o, mem_o, _ = aggregate(rows, optimized)
+    if sizes_g is None or sizes_o is None:
+        return
+
+    common = np.intersect1d(sizes_g, sizes_o)
+    if common.size == 0:
+        return
+
+    print(f"\nPerformance gain ({optimized} vs {general}):")
+    print(f"{'N':>6} {'time gain':>12} {'memory gain':>12}")
+    for n in common:
+        t_g = time_g[0][sizes_g == n][0]
+        t_o = time_o[0][sizes_o == n][0]
+        m_g = mem_g[0][sizes_g == n][0]
+        m_o = mem_o[0][sizes_o == n][0]
+        time_gain = (t_g - t_o) / t_g * 100 if t_g > 0 else float("nan")
+        mem_gain = (m_g - m_o) / m_g * 100 if m_g > 0 else float("nan")
+        print(f"{int(n):>6} {time_gain:>11.1f}% {mem_gain:>11.1f}%")
+
 def main():
     filename = sys.argv[1] if len(sys.argv) > 1 else "benchmark_results.csv"
     rows = read_csv(filename)
@@ -95,6 +116,8 @@ def main():
         sizes, time_stats, mem_stats, counts = aggregate(rows, algo)
         if sizes is not None and np.any(counts > 1):
             print(f"\n[{algo}] Samples per N: {dict(zip(sizes.astype(int), counts.astype(int)))}")
+
+    report_gains(rows)
 
 if __name__ == "__main__":
     main()
